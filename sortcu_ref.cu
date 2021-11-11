@@ -24,7 +24,7 @@ void check_cuda_error(cudaError_t err, int line) {
 
 // sets up and calls GPU kernel
 void sort(uint32_t *data, int ndata) {
-  uint32_t *h_data = data;
+  uint32_t *h_data = data; //host pointer
   const int num_data = ndata;
   const int num_bytes = num_data * sizeof(uint32_t);
 
@@ -33,15 +33,15 @@ void sort(uint32_t *data, int ndata) {
     least_pow2++;
   }
 
-  const int padded_num_data = (1 << least_pow2);
-  const int padded_num_bytes = padded_num_data * sizeof(uint32_t);
-  const int pad_num_data = padded_num_data - num_data;
+  const int padded_num_data = (1 << least_pow2); //number of elements after padding
+  const int padded_num_bytes = padded_num_data * sizeof(uint32_t); // number of bytes with padding
+  const int pad_num_data = padded_num_data - num_data; // number of elements to be padded
 
-  uint32_t *d_data = nullptr;
-  CHECK_ERROR(cudaMalloc(&d_data, padded_num_bytes));
+  uint32_t *d_data = nullptr; //device pointer
+  CHECK_ERROR(cudaMalloc(&d_data, padded_num_bytes)); //allocate padded_num_bytes on device(GPU)
   CHECK_ERROR(cudaMemcpy(d_data + pad_num_data, h_data, num_bytes,
-                    cudaMemcpyHostToDevice));
-  CHECK_ERROR(cudaMemset(d_data, 0, pad_num_data));
+                    cudaMemcpyHostToDevice)); //copy all elements to device after leaving pad number of elements
+  CHECK_ERROR(cudaMemset(d_data, 0, pad_num_data)); // set all elements to be padded as 0
 
   int num_threads = 512;
   int num_blocks = (padded_num_data + num_threads - 1) / num_threads;
