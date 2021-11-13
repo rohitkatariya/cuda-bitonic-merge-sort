@@ -9,7 +9,7 @@ using namespace std;
 int main(int argc, char *argv[]) {
     int ndata;
     ndata = stoi(argv[1]);
-    printf("ndata %d\n",ndata);
+    printf("ndata %d,",ndata);
 
     uint32_t *data = new uint32_t[ndata];
     for(int i=0;i<ndata;i++){

@@ -1,12 +1,12 @@
 hellomake: sortcu.cu
-	nvcc -c sortcu.cu -o sortcu.o
-	ar cr libsortcu.a sortcu.o
+	nvcc -c sortcu.cu -o sortcu.o --std=c++11
+	ar cr libsortcu.a sortcu.o 
 
 my:sortcu.cu a5.cpp
-	nvcc -c sortcu.cu -o sortcu.o
-	ar cr libsortcu.a sortcu.o
-	nvcc -c a5.cpp -o a5.o
-	nvcc a5.o libsortcu.a -o a.out 
+	nvcc -c sortcu.cu -o sortcu.o --std=c++11
+	ar cr libsortcu.a sortcu.o 
+	nvcc -c a5.cpp -o a5.o --std=c++11
+	nvcc a5.o libsortcu.a -o a.out --std=c++11
 	# ./a.out 121
 	#rm -rf input_dir/*.txt output_dir/*.txt output_dir/*.csv output_dir/*.mpi
 	# time mpirun -np 4 ./a.out
