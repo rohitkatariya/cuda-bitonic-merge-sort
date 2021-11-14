@@ -22,10 +22,6 @@ void check_cuda_error(cudaError_t err, int line) {
 
 #define CHECK_ERROR(err) check_cuda_error(err, __LINE__)
 
-void prefix_sum_mod(){
-
-}
-
 
 // sets up and calls GPU kernel
 void sort(uint32_t *data, int ndata) {
@@ -49,31 +45,72 @@ void sort(uint32_t *data, int ndata) {
                     cudaMemcpyHostToDevice)); //copy all elements to device after leaving pad number of elements
   CHECK_ERROR(cudaMemset(d_data, 0, pad_num_data)); // set all elements to be padded as 0
   
-  return;
-  uint32_t *d_prefx_data = nullptr; //device pointer
-  CHECK_ERROR(cudaMalloc(&d_prefx_data, padded_num_bytes)); //allocate padded_num_bytes on device(GPU)
-  CHECK_ERROR(cudaMemcpy(d_prefx_data + pad_num_data, h_data, num_bytes,
-                    cudaMemcpyHostToDevice));
-  CHECK_ERROR(cudaMemset(d_prefx_data, 0, pad_num_data));
+  // uint32_t *d_prefx_data = nullptr; //device pointer
+  // CHECK_ERROR(cudaMalloc(&d_prefx_data, padded_num_bytes)); //allocate padded_num_bytes on device(GPU)
+  // CHECK_ERROR(cudaMemcpy(d_prefx_data + pad_num_data, h_data, num_bytes,
+  //                   cudaMemcpyHostToDevice));
+  // CHECK_ERROR(cudaMemset(d_prefx_data, 0, pad_num_data));
 
-  int num_threads = 512;
-  int num_blocks = (padded_num_data + num_threads - 1) / num_threads;
   
-  for (int step = 2; step <= padded_num_data; step <<= 1) {
-    for (int substep = step >> 1; substep > 0; substep >>= 1) {
-      CHECK_ERROR(cudaMemcpyToSymbol(d_step, &step, sizeof(int)));
-      CHECK_ERROR(cudaMemcpyToSymbol(d_substep, &substep, sizeof(int)));
-      sortcu<<<num_blocks, num_threads>>>(d_data, padded_num_data);
-    }
+  uint32_t **B = new uint32_t*[least_pow2+1];
+  uint32_t **C = new uint32_t*[least_pow2+1];
+  uint32_t *this_addr=nullptr;
+  
+  CHECK_ERROR(cudaMalloc(&this_addr, padded_num_bytes));
+  B[0]=this_addr;
+  CHECK_ERROR(cudaMalloc(&this_addr, padded_num_bytes));
+  C[0]=this_addr;
+
+
+  CHECK_ERROR(cudaMemcpy(B[0] + pad_num_data, h_data, num_bytes,
+                    cudaMemcpyHostToDevice)); //copy all elements to device after leaving pad number of elements
+  CHECK_ERROR(cudaMemset(B[0], 0, pad_num_data)); 
+  CHECK_ERROR(cudaMemcpy(C[0] + pad_num_data, h_data, num_bytes,
+                    cudaMemcpyHostToDevice)); //copy all elements to device after leaving pad number of elements
+  CHECK_ERROR(cudaMemset(C[0], 0, pad_num_data)); 
+  int num_ele_this = padded_num_bytes;
+
+  // Data Flow up
+  for(int h = 1 ; h<=least_pow2;h++){
+    num_ele_this = num_ele_this/2;
+    printf("\nallocating %d",num_ele_this/ sizeof(uint32_t));
+    CHECK_ERROR(cudaMalloc(&this_addr, num_ele_this));
+    B[h]=this_addr;
+    CHECK_ERROR(cudaMalloc(&this_addr, num_ele_this));
+    C[h]=this_addr;
   }
+  // CHECK_ERROR(cudaMemset(B[0], 0, pad_num_data));
+  // int num_threads = 512;
+  // int num_blocks = (padded_num_data + num_threads - 1) / num_threads;
+  
+  // for(int i =0;i<padded_num_bytes;i++){
+  //   B[0][i]=d_data[i];
+  // }
+  return ;
+  
+  
+  // for (int step = 2; step <= padded_num_data; step <<= 1) {
+  //   for (int substep = step >> 1; substep > 0; substep >>= 1) {
+  //     CHECK_ERROR(cudaMemcpyToSymbol(d_step, &step, sizeof(int)));
+  //     CHECK_ERROR(cudaMemcpyToSymbol(d_substep, &substep, sizeof(int)));
+  //     sortcu<<<num_blocks, num_threads>>>(d_data, padded_num_data);
+  //   }
+  // }
 
-  CHECK_ERROR(cudaDeviceSynchronize());
+  // CHECK_ERROR(cudaDeviceSynchronize());
 
-  CHECK_ERROR(cudaMemcpy(h_data, d_data + pad_num_data, num_bytes,
-                    cudaMemcpyDeviceToHost));
+  // CHECK_ERROR(cudaMemcpy(h_data, d_data + pad_num_data, num_bytes,
+  //                   cudaMemcpyDeviceToHost));
 
-  CHECK_ERROR(cudaFree(d_data));
+  // CHECK_ERROR(cudaFree(d_data));
 }
+
+
+// kernel ran on the GPU
+__global__ void sortcu(uint32_t *B_this, int B_prev) {
+  int i = blockDim.x * blockIdx.x + threadIdx.x;
+  int j = i ^ d_substep;
+} 
 
 // kernel ran on the GPU
 __global__ void sortcu(uint32_t *data, int ndata) {
