@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
 
     uint32_t *data = new uint32_t[ndata];
     for(int i=0;i<ndata;i++){
-        data[i]=rand()%1000;
+        data[i]=rand()%10;
     }
     sort(data, ndata);
     // for(int i=0;i<ndata;i++){
