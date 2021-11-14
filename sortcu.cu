@@ -13,13 +13,13 @@
 
 #define MOD_MAX_SUM_MY(a,b) ( (long(a)+long(b)) % MOD_MAX_MY )
 
-__global__ void sortcu(uint32_t *idx_arr, uint32_t *prefix_arr, int ndata);
+__global__ void sortcu( uint32_t *data_arr,uint32_t *prefix_arr, int ndata);
 __global__ void prefix_up(uint32_t *B_this, uint32_t *B_prev, int num_ele_this);
 __global__ void prefix_down(uint32_t *B_h, uint32_t *C_h, uint32_t *C_hp1, int num_ele_this) ;
 __global__ void init_idx_arr(uint32_t *index_arr,int num_ele_this);
 __global__ void d_idx_convert(uint32_t *index_arr,uint32_t * d_prfx ,int num_ele_this);
-__device__ int d_step;
-__device__ int d_substep;
+__device__ int64_t d_step;
+__device__ int64_t d_substep;
 using namespace std;
 // check cuda error
 void check_cuda_error(cudaError_t err, int line) {
@@ -32,12 +32,11 @@ void check_cuda_error(cudaError_t err, int line) {
 
 #define CHECK_ERROR(err) check_cuda_error(err, __LINE__)
 
-
 // sets up and calls GPU kernel
 void sort(uint32_t *data, int ndata) {
   uint32_t *h_data = data; //host pointer
   const int num_data = ndata;
-  const int num_bytes = num_data * sizeof(uint32_t);
+  const long num_bytes = num_data * sizeof(uint32_t);
 
   int least_pow2 = 0;
   while ((1ULL << least_pow2) < num_data) {
@@ -46,22 +45,9 @@ void sort(uint32_t *data, int ndata) {
   // printf("\nnum_data:%d,lp:%d\n",num_data,least_pow2);
   
   const int padded_num_data = (1 << least_pow2); //number of elements after padding
-  const int padded_num_bytes = padded_num_data * sizeof(uint32_t); // number of bytes with padding
+  const long padded_num_bytes = padded_num_data * sizeof(uint32_t); // number of bytes with padding
   const int pad_num_data = padded_num_data - num_data; // number of elements to be padded
-
-  // uint32_t *d_data = nullptr; //device pointer
-  // CHECK_ERROR(cudaMalloc(&d_data, padded_num_bytes)); //allocate padded_num_bytes on device(GPU)
-  // CHECK_ERROR(cudaMemcpy(d_data + pad_num_data, h_data, num_bytes,
-  //                   cudaMemcpyHostToDevice)); //copy all elements to device after leaving pad number of elements
-  // CHECK_ERROR(cudaMemset(d_data, 0, pad_num_data)); // set all elements to be padded as 0
-  
-  // uint32_t *d_prefx_data = nullptr; //device pointer
-  // CHECK_ERROR(cudaMalloc(&d_prefx_data, padded_num_bytes)); //allocate padded_num_bytes on device(GPU)
-  // CHECK_ERROR(cudaMemcpy(d_prefx_data + pad_num_data, h_data, num_bytes,
-  //                   cudaMemcpyHostToDevice));
-  // CHECK_ERROR(cudaMemset(d_prefx_data, 0, pad_num_data));
-
-  
+ 
   uint32_t **B = new uint32_t*[least_pow2+1];
   uint32_t **C = new uint32_t*[least_pow2+1];
   uint32_t *this_addr=nullptr;
@@ -71,52 +57,39 @@ void sort(uint32_t *data, int ndata) {
   CHECK_ERROR(cudaMalloc(&this_addr, padded_num_bytes));
   C[0]=this_addr;
 
-
+  // cout<<"\nnum_bytes:"<<num_bytes;
   CHECK_ERROR(cudaMemcpy(B[0] + pad_num_data, h_data, num_bytes,
                     cudaMemcpyHostToDevice)); //copy all elements to device after leaving pad number of elements
   CHECK_ERROR(cudaMemset(B[0], 0, pad_num_data)); 
-  CHECK_ERROR(cudaMemcpy(C[0] + pad_num_data, h_data, num_bytes,
-                    cudaMemcpyHostToDevice)); //copy all elements to device after leaving pad number of elements
-  CHECK_ERROR(cudaMemset(C[0], 0, pad_num_data)); 
+  // CHECK_ERROR(cudaMemcpy(C[0] + pad_num_data, h_data, num_bytes,
+  //                   cudaMemcpyHostToDevice)); //copy all elements to device after leaving pad number of elements
+  // CHECK_ERROR(cudaMemset(C[0], 0, pad_num_data)); 
   
   int num_ele_this = padded_num_data;
   
   int num_threads = 512;
   int num_blocks = (padded_num_data + num_threads - 1) / num_threads;
   
-  // cout<<"\n\n";
-  //  for(int i =0;i<pad_num_data;i++)
-  //     cout<<"\t"<<0;
-  // for(int i =0;i<num_data;i++)
-  //     cout<<"\t"<<h_data[i];
-  uint32_t *temp_B = new uint32_t[padded_num_data];
-
+  // uint32_t *temp_B = new uint32_t[padded_num_data];
+  // cout<<"\nData Flow up";
   // Data Flow up
   for(int h = 1 ; h<=least_pow2;h++){
     num_ele_this = num_ele_this/2;
     // printf("\nallocating %d",num_ele_this);
-    CHECK_ERROR(cudaMalloc(&this_addr, num_ele_this * sizeof(uint32_t)));
+    CHECK_ERROR(cudaMalloc(&this_addr, long(num_ele_this) * long(sizeof(uint32_t))));
     B[h]=this_addr;
-    CHECK_ERROR(cudaMalloc(&this_addr, num_ele_this * sizeof(uint32_t)));
+    CHECK_ERROR(cudaMalloc(&this_addr, long(num_ele_this) * long(sizeof(uint32_t))));
     C[h]=this_addr;
     // CHECK_ERROR(cudaMemcpyToSymbol(d_num_ele_this, &num_ele_this, sizeof(int)));
     prefix_up<<<num_blocks, num_threads>>>(B[h], B[h-1],num_ele_this);
+    // cout<<"\nh:"<<h;
   }  
-  CHECK_ERROR(cudaDeviceSynchronize());
   
-  // #ifdef DEBUG
-  //   num_ele_this = 1;
-  //   for(int h = least_pow2 ; h>=0;h--){
-  //     CHECK_ERROR(cudaMemcpy(temp_B, B[h], num_ele_this*sizeof(uint32_t),
-  //                     cudaMemcpyDeviceToHost));
-  //     cout<<"\n\n["<<h<<"]";
-  //     for(int i =0;i<num_ele_this;i++)
-  //       cout<<" "<<temp_B[i];
-  //     num_ele_this = num_ele_this*2;
-  //   }
-  // #endif
-  num_ele_this=1;
+  CHECK_ERROR(cudaDeviceSynchronize());
   // Data Flow Down
+  // cout<<"\nData Flow Down";
+
+  num_ele_this=1;
   prefix_down<<<num_blocks, num_threads>>>(B[least_pow2],C[least_pow2],nullptr,num_ele_this);
   for(int h = least_pow2-1;h>=0;h--){
     num_ele_this*=2;
@@ -125,6 +98,8 @@ void sort(uint32_t *data, int ndata) {
   CHECK_ERROR(cudaDeviceSynchronize());
   // #ifdef DEBUG
   //   num_ele_this = 1;
+  // uint32_t *temp_B = new uint32_t[padded_num_data];
+
   //   for(int h = least_pow2 ; h>=0;h--){
   //     CHECK_ERROR(cudaMemcpy(temp_B, C[h], num_ele_this*sizeof(uint32_t),
   //                     cudaMemcpyDeviceToHost));
@@ -137,79 +112,87 @@ void sort(uint32_t *data, int ndata) {
 
   // free temp arrays
   for(int h = 1 ; h<=least_pow2;h++){
-    cudaFree(B[h]);
-    cudaFree(C[h]);
+    CHECK_ERROR(cudaFree(B[h]));
+    CHECK_ERROR(cudaFree(C[h]));
   }
-
+  // cout<<"\nprefix done";
   uint32_t *d_prefix_arr = C[0];
   uint32_t *d_data_arr = B[0];
-  uint32_t *index_arr=nullptr;
-  CHECK_ERROR(cudaMalloc(&index_arr, padded_num_bytes));
-  init_idx_arr<<<num_blocks, num_threads>>>(index_arr,num_ele_this);
+  // uint32_t *prefix_arr= new uint32_t[num_data];
+  // CHECK_ERROR(cudaMemcpy(prefix_arr, C[0]+pad_num_data, num_data*sizeof(uint32_t),
+  //                     cudaMemcpyDeviceToHost));
+  
+  // uint32_t *index_arr=nullptr;
+  // CHECK_ERROR(cudaMalloc(&index_arr, padded_num_bytes));
+  
+  // init_idx_arr<<<num_blocks, num_threads>>>(index_arr,num_ele_this);
   CHECK_ERROR(cudaDeviceSynchronize());
-
   // Sorting 
 
-  for (int step = 2; step <= padded_num_data; step <<= 1) {
-    for (int substep = step >> 1; substep > 0; substep >>= 1) {
-      CHECK_ERROR(cudaMemcpyToSymbol(d_step, &step, sizeof(int)));
-      CHECK_ERROR(cudaMemcpyToSymbol(d_substep, &substep, sizeof(int)));
-      sortcu<<<num_blocks, num_threads>>>(index_arr,d_prefix_arr, padded_num_data);
-    }
-  }
-  CHECK_ERROR(cudaDeviceSynchronize());
-
-  // #ifdef DEBUG
-  //   cout<<"\n\noriginal:";
-  //   CHECK_ERROR(cudaMemcpy(temp_B, d_data_arr, num_ele_this*sizeof(uint32_t),
-  //                       cudaMemcpyDeviceToHost));
-  //   for(int i =0;i<num_ele_this;i++)
-  //     cout<<" "<<temp_B[i];
-  //   CHECK_ERROR(cudaMemcpy(temp_B, d_prefix_arr, num_ele_this*sizeof(uint32_t),
-  //                       cudaMemcpyDeviceToHost));
-  //   cout<<"\n\nprefix  :";
-  //   for(int i =0;i<num_ele_this;i++)
-  //     // cout<<" "<<i<<","<<temp_B[i];
-  //     cout<<" "<<temp_B[i];
-  //   CHECK_ERROR(cudaMemcpy(temp_B, index_arr, num_ele_this*sizeof(uint32_t),
-  //                       cudaMemcpyDeviceToHost));
-  //   cout<<"\n\nindex   :";
-  //   for(int i =0;i<num_ele_this;i++)
-  //     cout<<" "<<temp_B[i];
-  // #endif
-
-  d_idx_convert<<<num_blocks, num_threads>>>(index_arr,d_data_arr, padded_num_data);
-  CHECK_ERROR(cudaDeviceSynchronize());
-  CHECK_ERROR(cudaMemcpy(temp_B, index_arr, num_ele_this*sizeof(uint32_t),
-                        cudaMemcpyDeviceToHost));
-  cout<<"\n\nfinal   :";
-    for(int i =0;i<num_ele_this;i++)
-      cout<<" "<<temp_B[i];
-  return ;
-  
-  
-  
-
+  for (int64_t step = 2; step <= padded_num_data; step <<= 1) {
+    for (int64_t substep = step >> 1; substep > 0; substep >>= 1) {
+      // printf("\nsteps:%d,%d",step,substep);
+      CHECK_ERROR(cudaMemcpyToSymbol(d_step, &step, sizeof(int64_t)));
+      CHECK_ERROR(cudaMemcpyToSymbol(d_substep, &substep, sizeof(int64_t)));
+      sortcu<<<num_blocks, num_threads>>>(d_data_arr,d_prefix_arr, padded_num_data);
   // CHECK_ERROR(cudaDeviceSynchronize());
 
-  // CHECK_ERROR(cudaMemcpy(h_data, d_data + pad_num_data, num_bytes,
-  //                   cudaMemcpyDeviceToHost));
+    }
+  }
+  
+  
+  // printf("\nsorting done");
+  
+  CHECK_ERROR(cudaDeviceSynchronize());
+  CHECK_ERROR(cudaMemcpy(h_data, d_data_arr+pad_num_data, num_data*sizeof(uint32_t),
+                        cudaMemcpyDeviceToHost));
 
-  // CHECK_ERROR(cudaFree(d_data));
+  
+  #ifdef DEBUG
+  // uint32_t *temp_B = new uint32_t[padded_num_data];
+  uint32_t *prefix_arr= new uint32_t[num_data];
+  // cout<<"\nprefix_orig";
+  // for(int i =0;i<num_data;i++)
+  //   cout<<" "<<prefix_arr[i];
+    // cout<<"\n\norig:";
+    // for(int i =0;i<num_data;i++)
+    //   cout<<" "<<h_data[i]<<"_"<<prefix_arr[i];
+
+    
+    
+    
+    CHECK_ERROR(cudaMemcpy(prefix_arr, d_prefix_arr+pad_num_data, num_data*sizeof(uint32_t),
+                        cudaMemcpyDeviceToHost));
+    // cout<<"\n\nsorted:";
+    // for(int i =0;i<min(num_data,100);i++)
+    //   cout<<" "<<h_data[i]<<"_"<<prefix_arr[i];
+
+    // CHECK_ERROR(cudaMemcpy(temp_B, index_arr, long(padded_num_data)*sizeof(uint32_t),
+    //                     cudaMemcpyDeviceToHost));
+    // cout<<"\n\nindex   :";
+    // for(int i =0;i<padded_num_data;i++)
+    //   cout<<" "<<temp_B[i];
+  #endif
+  CHECK_ERROR(cudaFree(B[0]));
+  CHECK_ERROR(cudaFree(C[0]));
+
+  delete[] C;
+  delete[] B;
+  
 }
 
 // kernel ran on the GPU
 __global__ void d_idx_convert(uint32_t *index_arr,uint32_t * d_arr ,int num_ele_this) {
   int i = blockDim.x * blockIdx.x + threadIdx.x;
   if(i<num_ele_this){
-    index_arr[i]=d_arr[index_arr[i]];
+    index_arr[i]=d_arr  [index_arr[i]];
   }
   
 }
 
 // kernel ran on the GPU
 __global__ void init_idx_arr(uint32_t *index_arr,int num_ele_this) {
-  int i = blockDim.x * blockIdx.x + threadIdx.x;
+  uint32_t i = blockDim.x * blockIdx.x + threadIdx.x;
   if(i<num_ele_this){
     index_arr[i]=i;
   }
@@ -238,20 +221,65 @@ __global__ void prefix_up(uint32_t *B_this, uint32_t *B_prev, int num_ele_this) 
 } 
 
 // kernel ran on the GPU
-__global__ void sortcu(uint32_t *idx_arr, uint32_t *prefix_arr, int ndata) {
-  int i = blockDim.x * blockIdx.x + threadIdx.x;
-  int j = i ^ d_substep;
- 
-  uint32_t data_i = prefix_arr[idx_arr[i]];
-  uint32_t data_j = prefix_arr[idx_arr[j]];
-  uint32_t data_i_i = idx_arr[i];
-  uint32_t data_j_i = idx_arr[j];
+__global__ void sortcu(uint32_t *d_data_arr, uint32_t *d_prefix_arr, int ndata) {
+  int64_t i = blockDim.x * blockIdx.x + threadIdx.x;
+  if(i<ndata){
+    int64_t j = i ^ d_substep;
 
-  if (j > i) {
-    if ((((d_step & i) == 0) && (data_i > data_j)) ||
-        (((d_step & i) != 0) && (data_i < data_j))) {
-      idx_arr[i] = data_j_i;
-      idx_arr[j] = data_i_i;
+    uint32_t data_i = d_prefix_arr[i];
+    uint32_t data_j = d_prefix_arr[j];
+    uint32_t vdata_i = d_data_arr[i];
+    uint32_t vdata_j = d_data_arr[j];
+    // uint32_t temp_my = 0;
+    if (j > i) {
+      if ((((d_step & i) == 0) && (data_i > data_j)) ||
+          (((d_step & i) != 0) && (data_i < data_j))) {
+        d_prefix_arr[i] = data_j;
+        d_prefix_arr[j] = data_i;
+        d_data_arr[i]=vdata_j;
+        d_data_arr[j]=vdata_i;
+      }
     }
   }
 }
+
+// // kernel ran on the GPU
+// __global__ void sortcu(uint32_t *d_data_arr, uint32_t *d_prefix_arr, int ndata) {
+//   int i = blockDim.x * blockIdx.x + threadIdx.x;
+//   int j = i ^ d_substep;
+
+//   uint32_t data_i = d_prefix_arr[i];
+//   uint32_t data_j = d_prefix_arr[j];
+//   uint32_t temp_my = 0;
+//   if (j > i) {
+//     if ((((d_step & i) == 0) && (data_i > data_j)) ||
+//         (((d_step & i) != 0) && (data_i < data_j))) {
+//       d_prefix_arr[i] = data_j;
+//       d_prefix_arr[j] = data_i;
+//       temp_my = d_data_arr[i];
+//       d_data_arr[i] = d_data_arr[j];
+//       d_data_arr[j]=temp_my;
+
+//     }
+//   }
+// }
+
+
+// // kernel ran on the GPU
+// __global__ void sortcu1(uint32_t *idx_arr, uint32_t *prefix_arr, int ndata) {
+//   int i = blockDim.x * blockIdx.x + threadIdx.x;
+//   int j = i ^ d_substep;
+ 
+//   uint32_t data_i = prefix_arr[idx_arr[i]];
+//   uint32_t data_j = prefix_arr[idx_arr[j]];
+//   uint32_t data_i_i = idx_arr[i];
+//   uint32_t data_j_i = idx_arr[j];
+
+//   if (j > i) {
+//     if ((((d_step & i) == 0) && (data_i > data_j)) ||
+//         (((d_step & i) != 0) && (data_i < data_j))) {
+//       idx_arr[i] = data_i_i;
+//       idx_arr[j] = data_j_i;
+//     }
+//   }
+// }
