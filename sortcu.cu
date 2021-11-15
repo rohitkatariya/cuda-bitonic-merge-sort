@@ -48,9 +48,7 @@ void sort(uint32_t *data, int ndata) {
   
   CHECK_ERROR(cudaMalloc(&this_addr, padded_num_bytes));
   B[0]=this_addr;
-  CHECK_ERROR(cudaMalloc(&this_addr, padded_num_bytes));
-  C[0]=this_addr;
-
+  
   CHECK_ERROR(cudaMemcpy(B[0] + pad_num_data, h_data, num_bytes,
                     cudaMemcpyHostToDevice)); //copy all elements to device after leaving pad number of elements
   CHECK_ERROR(cudaMemset(B[0], 0, pad_num_data)); 
@@ -65,8 +63,6 @@ void sort(uint32_t *data, int ndata) {
     num_ele_this = num_ele_this/2;
     CHECK_ERROR(cudaMalloc(&this_addr, long(num_ele_this) * long(sizeof(uint32_t))));
     B[h]=this_addr;
-    CHECK_ERROR(cudaMalloc(&this_addr, long(num_ele_this) * long(sizeof(uint32_t))));
-    C[h]=this_addr;
     prefix_up<<<num_blocks, num_threads>>>(B[h], B[h-1],num_ele_this);
   }  
   
@@ -74,18 +70,28 @@ void sort(uint32_t *data, int ndata) {
   // Data Flow Down
   
   num_ele_this=1;
+  CHECK_ERROR(cudaMalloc(&this_addr, long(num_ele_this) * long(sizeof(uint32_t))));
+  C[least_pow2]=this_addr;
   prefix_down<<<num_blocks, num_threads>>>(B[least_pow2],C[least_pow2],nullptr,num_ele_this);
+  CHECK_ERROR(cudaFree(B[least_pow2]));
   for(int h = least_pow2-1;h>=0;h--){
     num_ele_this*=2;
+    CHECK_ERROR(cudaMalloc(&this_addr, long(num_ele_this) * long(sizeof(uint32_t))));
+    C[h]=this_addr;
     prefix_down<<<num_blocks, num_threads>>>(B[h],C[h],C[h+1],num_ele_this);
+    if(h!=0)
+      CHECK_ERROR(cudaFree(B[h]));
+    if(h-2<=least_pow2)
+      CHECK_ERROR(cudaFree(C[h+2]));
   }
+  CHECK_ERROR(cudaFree(C[1]));
   CHECK_ERROR(cudaDeviceSynchronize());
   
   // free temp arrays
-  for(int h = 1 ; h<=least_pow2;h++){
-    CHECK_ERROR(cudaFree(B[h]));
-    CHECK_ERROR(cudaFree(C[h]));
-  }
+  // for(int h = 1 ; h<=least_pow2;h++){
+  //   CHECK_ERROR(cudaFree(B[h]));
+  //   CHECK_ERROR(cudaFree(C[h]));
+  // }
   uint32_t *d_prefix_arr = C[0];
   uint32_t *d_data_arr = B[0];
   CHECK_ERROR(cudaDeviceSynchronize());
@@ -103,7 +109,26 @@ void sort(uint32_t *data, int ndata) {
   CHECK_ERROR(cudaDeviceSynchronize());
   CHECK_ERROR(cudaMemcpy(h_data, d_data_arr+pad_num_data, num_data*sizeof(uint32_t),
                         cudaMemcpyDeviceToHost));
+   // #ifdef DEBUG
+  uint32_t *prefix_arr= new uint32_t[num_data];
+    CHECK_ERROR(cudaMemcpy(prefix_arr, d_prefix_arr+pad_num_data, num_data*sizeof(uint32_t),
+                        cudaMemcpyDeviceToHost));
+    for(int i =0;i<num_data;i++){
+      if(i>0 && prefix_arr[i]==prefix_arr[i-1]){
+            continue;
+        }
+        if(i<num_data-1  && prefix_arr[i]==prefix_arr[i+1]){
+            continue;
+        }
+      cout<<prefix_arr[i]<<"\t";
+      if(i%5==0){
+        cout<<"\n";
+      }
+    }
+
   
+  // #endif
+
   CHECK_ERROR(cudaFree(B[0]));
   CHECK_ERROR(cudaFree(C[0]));
 
