@@ -109,7 +109,7 @@ void sort(uint32_t *data, int ndata) {
   CHECK_ERROR(cudaDeviceSynchronize());
   CHECK_ERROR(cudaMemcpy(h_data, d_data_arr+pad_num_data, num_data*sizeof(uint32_t),
                         cudaMemcpyDeviceToHost));
-   // #ifdef DEBUG
+   #ifdef DEBUG
   uint32_t *prefix_arr= new uint32_t[num_data];
     CHECK_ERROR(cudaMemcpy(prefix_arr, d_prefix_arr+pad_num_data, num_data*sizeof(uint32_t),
                         cudaMemcpyDeviceToHost));
@@ -127,7 +127,7 @@ void sort(uint32_t *data, int ndata) {
     }
 
   
-  // #endif
+   #endif
 
   CHECK_ERROR(cudaFree(B[0]));
   CHECK_ERROR(cudaFree(C[0]));
