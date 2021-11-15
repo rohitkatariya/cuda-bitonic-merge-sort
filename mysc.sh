@@ -32,7 +32,7 @@ module load compiler/cuda/9.2/compilervars
 #time -p mpirun -np $PBS_NTASKS a.out /home/cse/phd/csz208844/file_transfer/chhavi/out_file> $PBS_JOBID
 TIMEFORMAT=%R
 make my
-for i in {1..300000000..10000000}; do  time ./a.out $i;  done > myjobres 2>&1
+for i in 2 1073741824; do  time ./a.out $i;  done > myjobres 2>&1
 
 #NOTE
 # The job line is an example : users need to change it to suit their applications
