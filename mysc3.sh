@@ -31,8 +31,10 @@ module load compiler/cuda/9.2/compilervars
 #mpirun -n 4 a.out 
 #time -p mpirun -np $PBS_NTASKS a.out /home/cse/phd/csz208844/file_transfer/chhavi/out_file> $PBS_JOBID
 TIMEFORMAT=%R
-make my
-for i in {1..300000000..10000000}; do  time ./a.out $i;  done > myjobres 2>&1
+#make my
+for i in 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384 32768 ; do  time ./a.out $i;  done > myjobres3 2>&1
+for i in 65536 131072 262144 524288 1048576 2097152 4194304 8388608 ; do  time ./a.out $i;  done > myjobres4 2>&1
+for i in  16777216 33554432 67108864 134217728 268435456 536870912 1073741824 ; do  time ./a.out $i;  done > myjobres5 2>&1
 
 #NOTE
 # The job line is an example : users need to change it to suit their applications
