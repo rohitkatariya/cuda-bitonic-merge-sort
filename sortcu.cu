@@ -3,6 +3,8 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "sortcu.h"
+#include<bits/stdc++.h>
+#include <string>
 #define MOD_MAX_MY 4294967295
 
 
@@ -107,6 +109,13 @@ void sort(uint32_t *data, int ndata) {
   CHECK_ERROR(cudaMemcpy(h_data, d_data_arr+pad_num_data, num_data*sizeof(uint32_t),
                         cudaMemcpyDeviceToHost));
    #ifdef DEBUG
+   ofstream of;
+   char filename[80];
+  strcpy (filename,"input_dir/wrout_");
+  strcat (filename,to_string(num_data).c_str());
+  strcat (filename,".txt");
+  of.open(filename);
+  cout<<filename<<"\n";
   uint32_t *prefix_arr= new uint32_t[num_data];
     CHECK_ERROR(cudaMemcpy(prefix_arr, d_prefix_arr+pad_num_data, num_data*sizeof(uint32_t),
                         cudaMemcpyDeviceToHost));
@@ -117,13 +126,14 @@ void sort(uint32_t *data, int ndata) {
         if(i<num_data-1  && prefix_arr[i]==prefix_arr[i+1]){
             continue;
         }
-      cout<<prefix_arr[i]<<"\t";
-      if(i%5==0){
-        cout<<"\n";
+      // of<<prefix_arr[i]<<"\t";
+      of<<h_data[i]<<"_"<<prefix_arr[i]<<" ";
+      if(i%10==0){
+        of<<"\n";
       }
     }
 
-  
+  of.close();
   #endif
 
   CHECK_ERROR(cudaFree(B[0]));
