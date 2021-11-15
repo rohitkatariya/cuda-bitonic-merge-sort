@@ -6,10 +6,10 @@
 
 #include "sortcu.h"
 
-#define DEBUG
+// #define DEBUG
 
-// #define MOD_MAX_MY 4294967295
-#define MOD_MAX_MY 10
+#define MOD_MAX_MY 4294967295
+// #define MOD_MAX_MY 10
 
 #define MOD_MAX_SUM_MY(a,b) ( (long(a)+long(b)) % MOD_MAX_MY )
 
@@ -148,9 +148,9 @@ void sort(uint32_t *data, int ndata) {
                         cudaMemcpyDeviceToHost));
 
   
-  #ifdef DEBUG
+  // #ifdef DEBUG
   // uint32_t *temp_B = new uint32_t[padded_num_data];
-  uint32_t *prefix_arr= new uint32_t[num_data];
+  // uint32_t *prefix_arr= new uint32_t[num_data];
   // cout<<"\nprefix_orig";
   // for(int i =0;i<num_data;i++)
   //   cout<<" "<<prefix_arr[i];
@@ -161,18 +161,29 @@ void sort(uint32_t *data, int ndata) {
     
     
     
-    CHECK_ERROR(cudaMemcpy(prefix_arr, d_prefix_arr+pad_num_data, num_data*sizeof(uint32_t),
-                        cudaMemcpyDeviceToHost));
+    // CHECK_ERROR(cudaMemcpy(prefix_arr, d_prefix_arr+pad_num_data, num_data*sizeof(uint32_t),
+    //                     cudaMemcpyDeviceToHost));
     // cout<<"\n\nsorted:";
     // for(int i =0;i<min(num_data,100);i++)
-    //   cout<<" "<<h_data[i]<<"_"<<prefix_arr[i];
+    // for(int i =0;i<num_data;i++){
+    //   if(i>0 && prefix_arr[i]==prefix_arr[i-1]){
+    //         continue;
+    //     }
+    //     if(i<num_data-1  && prefix_arr[i]==prefix_arr[i+1]){
+    //         continue;
+    //     }
+    //   cout<<h_data[i]<<"_"<<prefix_arr[i]<<" ";
+    //   if(i%10==0){
+    //     cout<<"\n";
+    //   }
+    // }
 
     // CHECK_ERROR(cudaMemcpy(temp_B, index_arr, long(padded_num_data)*sizeof(uint32_t),
     //                     cudaMemcpyDeviceToHost));
     // cout<<"\n\nindex   :";
     // for(int i =0;i<padded_num_data;i++)
     //   cout<<" "<<temp_B[i];
-  #endif
+  // #endif
   CHECK_ERROR(cudaFree(B[0]));
   CHECK_ERROR(cudaFree(C[0]));
 
