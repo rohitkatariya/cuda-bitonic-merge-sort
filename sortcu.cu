@@ -7,7 +7,7 @@
 
 
 #define MOD_MAX_SUM_MY(a,b) ( (long(a)+long(b)) % MOD_MAX_MY )
-
+// #define DEBUG
 __global__ void sortcu( uint32_t *data_arr,uint32_t *prefix_arr, int ndata);
 __global__ void prefix_up(uint32_t *B_this, uint32_t *B_prev, int num_ele_this);
 __global__ void prefix_down(uint32_t *B_h, uint32_t *C_h, uint32_t *C_hp1, int num_ele_this) ;
@@ -82,8 +82,8 @@ void sort(uint32_t *data, int ndata) {
     if(h!=0)
       CHECK_ERROR(cudaFree(B[h]));
     CHECK_ERROR(cudaFree(C[h+1]));
-  }
   CHECK_ERROR(cudaDeviceSynchronize());
+  }
   
   // free temp arrays
   // for(int h = 1 ; h<=least_pow2;h++){
@@ -92,7 +92,6 @@ void sort(uint32_t *data, int ndata) {
   // }
   uint32_t *d_prefix_arr = C[0];
   uint32_t *d_data_arr = B[0];
-  CHECK_ERROR(cudaDeviceSynchronize());
   // Sorting 
 
   for (int64_t step = 2; step <= padded_num_data; step <<= 1) {
