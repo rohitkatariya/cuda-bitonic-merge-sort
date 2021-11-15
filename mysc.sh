@@ -11,7 +11,7 @@
 ###PBS -l select=16:ncpus=3:mpiprocs=1
 #PBS -l  select=1:ncpus=1:ngpus=1
 ### Specify "wallclock time" required for this job, hhh:mm:ss
-#PBS -l walltime=00:10:00
+#PBS -l walltime=00:20:00
 #PBS -P col730.csz208844  
 #PBS -o jobOutput.txt
 #PBS -l place=scatter
@@ -32,7 +32,7 @@ module load compiler/cuda/9.2/compilervars
 #time -p mpirun -np $PBS_NTASKS a.out /home/cse/phd/csz208844/file_transfer/chhavi/out_file> $PBS_JOBID
 TIMEFORMAT=%R
 make my
-for i in 2 1073741824; do  time ./a.out $i;  done > myjobres 2>&1
+for i in 1073741824; do  time ./a.out $i;  done >> myjobres 2>&1
 
 #NOTE
 # The job line is an example : users need to change it to suit their applications

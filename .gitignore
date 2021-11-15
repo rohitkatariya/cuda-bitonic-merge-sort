@@ -7,7 +7,7 @@
 input*.txt
 # Prerequisites
 *.d
-
+input_dir
 # Compiled Object files
 *.slo
 *.lo

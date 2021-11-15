@@ -34,7 +34,8 @@ void sort(uint32_t *data, int ndata) {
   uint32_t *h_data = data; //host pointer
   const int num_data = ndata;
   const long num_bytes = num_data * sizeof(uint32_t);
-
+  if(ndata==1)
+    return;
   int least_pow2 = 0;
   while ((1ULL << least_pow2) < num_data) {
     least_pow2++;
