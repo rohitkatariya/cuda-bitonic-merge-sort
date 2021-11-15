@@ -81,10 +81,8 @@ void sort(uint32_t *data, int ndata) {
     prefix_down<<<num_blocks, num_threads>>>(B[h],C[h],C[h+1],num_ele_this);
     if(h!=0)
       CHECK_ERROR(cudaFree(B[h]));
-    if(h-2<=least_pow2)
-      CHECK_ERROR(cudaFree(C[h+2]));
+    CHECK_ERROR(cudaFree(C[h+1]));
   }
-  CHECK_ERROR(cudaFree(C[1]));
   CHECK_ERROR(cudaDeviceSynchronize());
   
   // free temp arrays
@@ -127,7 +125,7 @@ void sort(uint32_t *data, int ndata) {
     }
 
   
-   #endif
+  #endif
 
   CHECK_ERROR(cudaFree(B[0]));
   CHECK_ERROR(cudaFree(C[0]));
